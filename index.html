@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yak & Berry | Enterprise POS & Multi-Outlet Management Portal</title>
+  <style>
+    :root {
+      --primary: #0f172a;
+      --accent: #2563eb;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+    }
+
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text-main); margin: 0; padding: 20px; }
+    .container { max-width: 1300px; margin: 0 auto; }
+    .hidden { display: none !important; }
+    .flex { display: flex; gap: 12px; align-items: center; }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
+    
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    
+    input, select, button { padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; width: 100%; }
+    input:focus, select:focus { border-color: var(--accent); }
+    button { background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; transition: background 0.2s, opacity 0.2s; width: auto; }
+    button:hover { opacity: 0.9; }
+    button.accent { background: var(--accent); }
+    button.success { background: var(--success); }
+    button.warning { background: var(--warning); color: #000; }
+    button.danger { background: var(--danger); }
+    button.secondary { background: #e2e8f0; color: var(--text-main); }
+    
+    .nav-tabs { display: flex; gap: 6px; border-bottom: 2px solid var(--border); margin-bottom: 20px; overflow-x: auto; }
+    .tab-btn { background: none; border: none; padding: 12px 14px; border-bottom: 3px solid transparent; border-radius: 0; color: var(--text-muted); font-weight: 600; cursor: pointer; white-space: nowrap; font-size: 13px; }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+    th { text-align: left; padding: 10px; background: #f1f5f9; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+    td { padding: 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .badge-ok { background: #dcfce7; color: #166534; }
+    .badge-low { background: #fef3c7; color: #92400e; }
+    .badge-out { background: #fee2e2; color: #991b1b; }
+
+    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 15px; }
+    .metric-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+    .metric-title { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+    .metric-value { font-size: 20px; font-weight: 800; margin-top: 6px; }
+
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+    .modal-card { background: white; border-radius: 16px; padding: 28px; width: 450px; max-width: 90%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+
+    #receipt-print-area { display: none; }
+    @media print {
+      body * { visibility: hidden !important; }
+      #receipt-print-area, #receipt-print-area * { visibility: visible !important; }
+      #receipt-print-area {
+        display: block !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 80mm !important;
+        margin: 0 !important;
+        padding: 5px !important;
+        font-family: monospace;
+        font-size: 12px;
+        color: #000 !important;
+        background: #fff !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- UNIFIED GATEWAY CONTAINER -->
+  <div id="gateway-section" class="card" style="max-width: 480px; margin: 60px auto;">
+    <div style="text-align: center; margin-bottom: 20px;">
+      <h2 id="gateway-app-title">Yak & Berry POS Gateway</h2>
+      <p style="color: var(--text-muted); font-size: 13px;">Multi-Outlet License Activation & Sign-In</p>
+    </div>
+
+    <!-- Gateway Sub-Tabs -->
+    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+      <button id="gw-btn-login" onclick="switchGatewayTab('login')" class="accent" style="flex:1;">Sign In</button>
+      <button id="gw-btn-register" onclick="switchGatewayTab('register')" class="secondary" style="flex:1;">New Registration</button>
+      <button id="gw-btn-admin" onclick="switchGatewayTab('admin')" class="secondary" style="flex:1;">Developer Admin</button>
+    </div>
+
+    <!-- 1. SIGN IN VIEW -->
+    <div id="gw-login-view">
+      <p style="font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 15px;">Enter the Activation Key provided by the Developer to access this outlet's POS.</p>
+      <input type="password" id="activation-key-input" placeholder="Enter Activation Key (e.g. KEY-XXXX)" style="text-align: center; font-size: 16px; letter-spacing: 2px; margin-bottom: 12px;">
+      <button onclick="handleActivationKeyLogin()" style="width: 100%; padding: 12px;" class="accent">Access POS Portal</button>
+      <p id="login-error" style="color: var(--danger); font-size: 13px; margin-top: 10px; text-align: center;" class="hidden">Invalid or Expired Activation Key</p>
+    </div>
+
+    <!-- 2. REGISTRATION VIEW -->
+    <div id="gw-register-view" class="hidden">
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Register your business details to request a developer activation license.</p>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <input type="text" id="reg-outlet-name" placeholder="Company / Outlet Name (e.g. Yak & Berry Thamel)">
+        <input type="text" id="reg-owner-name" placeholder="Owner / Manager Full Name">
+        <input type="text" id="reg-phone" placeholder="Contact Phone Number">
+        <input type="text" id="reg-pan" placeholder="Company PAN / VAT Number">
+        <button onclick="submitOutletRegistration()" class="success" style="width: 100%; margin-top: 5px;">Submit Registration</button>
+      </div>
+      <div id="reg-success-box" class="hidden" style="margin-top: 15px; padding: 12px; background: #dcfce7; color: #166534; border-radius: 8px; font-size: 13px; text-align: center;">
+        Registration submitted successfully! Pending developer review and license issuance.
+      </div>
+    </div>
+
+    <!-- 3. DEVELOPER MASTER ADMIN VIEW -->
+    <div id="gw-admin-view" class="hidden">
+      <div id="admin-pin-gate">
+        <p style="font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 15px;">🔒 Developer Access Only.<br>Enter Master Admin PIN Code:</p>
+        <input type="password" id="dev-admin-pin" placeholder="Developer PIN" style="text-align: center; font-size: 18px; letter-spacing: 4px; margin-bottom: 12px;">
+        <button onclick="verifyDeveloperPin()" style="width: 100%;" class="accent">Unlock Admin Panel</button>
+        <p id="dev-pin-error" style="color: var(--danger); font-size: 12px; text-align: center; margin-top: 8px;" class="hidden">Incorrect PIN Code</p>
+      </div>
+
+      <div id="admin-dashboard-panel" class="hidden">
+        <div class="flex-between" style="margin-bottom: 10px;">
+          <h4 style="margin:0; font-size: 14px;">License & Registration Requests</h4>
+          <button onclick="lockDeveloperAdmin()" class="secondary" style="font-size: 11px; padding: 4px 8px; width:auto;">Lock Panel</button>
+        </div>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Approve registration, assign custom key or validity period, manage security PIN, or delete outlets.</p>
+        
+        <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+          <h5 style="margin: 0 0 8px 0; font-size: 12px; color: var(--text-main);">Developer Security & Key Assignment</h5>
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <input type="password" id="new-dev-pin-input" placeholder="New Master PIN" style="font-size: 12px; padding: 6px;">
+            <button onclick="updateDeveloperPin()" class="warning" style="font-size: 11px; padding: 6px; width: auto;">Change PIN</button>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <select id="admin-manual-outlet-select" style="font-size: 12px; padding: 6px;"></select>
+            <div style="display: flex; gap: 6px;">
+              <input type="text" id="admin-custom-key-input" placeholder="Custom Key (e.g. KEY-YAK1)" style="font-size: 12px; padding: 6px; text-transform: uppercase;">
+              <input type="number" id="admin-custom-days-input" placeholder="Days" value="365" style="font-size: 12px; padding: 6px; width: 80px;">
+              <button onclick="assignCustomKeyByAdmin()" class="success" style="font-size: 11px; padding: 6px; width: auto;">Assign Key</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="max-height: 260px; overflow-y: auto;">
+          <table>
+            <thead>
+              <tr><th>Outlet / Details</th><th>Status / Key</th><th>Action</th></tr>
+            </thead>
+            <tbody id="admin-registrations-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MAIN APP PORTAL -->
+  <div id="app-section" class="hidden">
+
+    <!-- HEADER / USER CONTEXT -->
+    <div class="card flex-between" style="padding: 14px 20px;">
+      <div class="flex" style="width: auto;">
+        <h3 id="user-display" style="margin: 0;">Outlet Name</h3>
+        <span id="role-badge" class="badge badge-ok">Licensed Active</span>
+      </div>
+      <div class="flex" style="width: auto;">
+        <span id="shift-status-badge" class="badge badge-low">Shift Closed</span>
+        <button onclick="toggleShiftModal()" class="success" style="font-size: 12px; padding: 6px 10px;">Shift Control</button>
+        <button onclick="openStaffLoginModal()" class="secondary" style="font-size: 12px; padding: 6px 10px;">🔑 Staff PIN</button>
+        <button onclick="handleLogout()" class="danger" style="font-size: 12px; padding: 6px 10px;">Exit / Logout</button>
+      </div>
+    </div>
+
+    <!-- MAIN TAB NAVIGATION -->
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('pos-tab')">🍽️ POS Billing</button>
+      <button class="tab-btn" onclick="switchTab('stock-tab')">📦 Stock & RTE</button>
+      <button class="tab-btn" onclick="switchTab('purchases-tab')">📥 Purchase Register</button>
+      <button class="tab-btn" onclick="switchTab('attendance-tab')">👥 Attendance</button>
+      <button class="tab-btn" onclick="switchTab('loyalty-tab')">⭐ Guests</button>
+      <button class="tab-btn" onclick="switchTab('expenses-tab')">💸 Expenses</button>
+      <button class="tab-btn" onclick="switchTab('reports-tab')">📊 P&L / IRD Tax</button>
+      <button class="tab-btn" onclick="switchTab('admin-tab')">⚙️ Menu & Staff</button>
+    </div>
+
+    <!-- TAB 1: POS FLOOR & BILLING BOARD -->
+    <div id="pos-tab" class="tab-content">
+      <div class="card">
+        <h4 style="margin-top: 0;">Add Item to Active Table (All Prices VAT Inclusive)</h4>
+        <div class="flex" style="flex-wrap: wrap;">
+          <input type="number" id="table-num" placeholder="Table #" style="width: 90px;">
+          <select id="item-select" style="flex: 1; min-width: 220px; width: auto;"></select>
+          <input type="number" id="item-qty" value="1" min="1" style="width: 70px;">
+          <button onclick="addOrder()" class="accent" style="width: auto;">Add to Order</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flex-between">
+          <h4 style="margin: 0;">Active Tables</h4>
+          <span style="font-size: 13px; color: var(--text-muted);">Occupied: <b id="total-tables-count">0</b></span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Table</th>
+              <th>Bill Serial</th>
+              <th>Ordered Items</th>
+              <th>Subtotal (Incl. VAT)</th>
+              <th>Server</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="orders-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 2: STOCK INVENTORY -->
+    <div id="stock-tab" class="tab-content hidden">
+      <div class="card">
+        <div class="flex-between">
+          <div>
+            <h4 style="margin: 0;">Inventory & Closing Stock Valuation</h4>
+            <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted);">Track quantities for annual stock verification.</p>
+          </div>
+          <button onclick="openStockModal()" class="accent" style="width: auto;">+ New Product / Restock</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Product Name</th>
+              <th>Category</th>
+              <th>Unit Price (NPR Incl. VAT)</th>
+              <th>Available Stock</th>
+              <th>Total Stock Value</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="stock-items-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 3: PURCHASE REGISTER (IRD COMPLIANT) -->
+    <div id="purchases-tab" class="tab-content hidden">
+      <div class="card">
+        <div class="flex-between" style="margin-bottom: 15px;">
+          <h4 style="margin: 0;">Record Raw Material / Supplier Purchases (IRD Bill Entry)</h4>
+          <div class="flex" style="width: auto; gap: 8px;">
+            <button onclick="openVendorModal()" class="secondary" style="font-size: 12px; padding: 6px 12px; width: auto;">👥 Manage Vendor Directory</button>
+            <button onclick="exportPurchaseRegisterCSV()" class="accent" style="font-size: 12px; padding: 6px 12px; width: auto;">📥 Export Purchase CSV</button>
+          </div>
+        </div>
+        
+        <div class="flex" style="flex-wrap: wrap; margin-bottom: 15px;">
+          <input type="date" id="pur-date" style="width: 140px;">
+          <select id="pur-vendor-select" onchange="fillVendorPAN()" style="flex: 1; min-width: 200px;">
+            <option value="">-- Select Vendor / Supplier --</option>
+          </select>
+          <input type="text" id="pur-pan" placeholder="Supplier PAN / VAT No." style="width: 150px;" readonly>
+          <input type="text" id="pur-billno" placeholder="Bill Invoice #" style="width: 120px;">
+          <input type="number" id="pur-amount" placeholder="Total Amount (NPR)" style="width: 130px;">
+          <select id="pur-vat-type" style="width: 120px;">
+            <option value="VAT">Taxable (VAT)</option>
+            <option value="EXEMPT">Exempt / Zero</option>
+          </select>
+          <button onclick="addPurchaseBill()" class="accent" style="width: auto;">Log Purchase</button>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Supplier Name</th>
+              <th>PAN / VAT #</th>
+              <th>Invoice #</th>
+              <th>Taxable Amount</th>
+              <th>Input VAT (13%)</th>
+              <th>Total Amount</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="purchases-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 4: STAFF ATTENDANCE -->
+    <div id="attendance-tab" class="tab-content hidden">
+      <div class="card" style="max-width: 600px; margin: 0 auto; text-align: center;">
+        <h3 style="margin-top: 0;">Facial Recognition Attendance Terminal</h3>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Position your face in front of the camera and enter your staff PIN to clock in or out.</p>
+        
+        <div style="position: relative; width: 100%; height: 260px; background: #1e293b; border-radius: 12px; overflow: hidden; display: flex; justify-content: center; align-items: center; margin-bottom: 20px;">
+          <div id="cam-placeholder" style="color: #94a3b8; font-size: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <div style="font-size: 36px;">📷</div>
+            <span>Camera Feed Active (Live Face Scan)</span>
+          </div>
+          <div style="position: absolute; border: 2px dashed #38bdf8; width: 140px; height: 180px; border-radius: 50% / 40%; pointer-events: none;"></div>
+          <div id="scan-status-overlay" class="hidden" style="position: absolute; bottom: 12px; background: rgba(16, 185, 129, 0.9); color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">Face Verified Successfully!</div>
+        </div>
+
+        <div class="flex" style="justify-content: center; gap: 10px; margin-bottom: 10px;">
+          <input type="password" id="attendance-pin-input" placeholder="Enter Staff PIN" style="max-width: 220px; text-align: center; font-size: 16px; letter-spacing: 3px;">
+          <button onclick="processFaceAttendance()" class="success" style="width: auto;">Verify & Clock</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 20px;">
+        <div class="flex-between">
+          <h4 style="margin: 0;">Today's Attendance Logs</h4>
+          <div class="flex" style="width: auto; gap: 8px;">
+            <span style="font-size: 13px; color: var(--text-muted);" id="attendance-date-label"></span>
+            <button onclick="exportAttendanceCSV()" class="accent" style="font-size: 12px; padding: 6px 12px; width: auto;">📥 Export CSV</button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Staff Name</th>
+              <th>Role</th>
+              <th>Entry Time (Clock-In)</th>
+              <th>Shift End Time (Clock-Out)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="attendance-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 5: LOYALTY DIRECTORY -->
+    <div id="loyalty-tab" class="tab-content hidden">
+      <div class="card">
+        <h4>Loyal Guest Directory & Auto-Discounts</h4>
+        <div class="flex" style="flex-wrap: wrap; margin-bottom: 15px;">
+          <input type="text" id="loyalty-phone-input" placeholder="Phone Number" style="width: 180px;">
+          <input type="text" id="loyalty-name-input" placeholder="Guest Full Name" style="flex: 1; min-width: 180px;">
+          <input type="number" id="loyalty-discount-input" placeholder="Discount %" value="10" min="0" max="100" style="width: 110px;">
+          <button class="warning" onclick="saveLoyalGuest()" style="width: auto;">Save Guest Profile</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Phone Number</th>
+              <th>Guest Name</th>
+              <th>Built-in Discount</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="loyal-guests-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 6: EXPENSE TRACKER -->
+    <div id="expenses-tab" class="tab-content hidden">
+      <div class="card">
+        <h4>Record Store Expense</h4>
+        <div class="flex" style="flex-wrap: wrap;">
+          <input type="text" id="exp-title" placeholder="Description / Particulars" style="flex: 2; min-width: 200px;">
+          <input type="number" id="exp-amount" placeholder="Amount (NPR)" style="width: 130px;">
+          <select id="exp-category" style="width: auto;">
+            <option value="Raw Materials">Raw Ingredients / Supplies</option>
+            <option value="Utilities">Utilities, Rent & Electricity</option>
+            <option value="Staff Payout">Staff Salaries & Advance</option>
+            <option value="Other">Administrative & Other</option>
+          </select>
+          <button onclick="addExpense()" class="danger" style="width: auto;">Record Expense</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 7: SALES REPORTS & IRD TAX -->
+    <div id="reports-tab" class="tab-content hidden">
+      <div class="card">
+        <div class="flex-between" style="flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+          <h4 style="margin:0;">Financial Summary & VAT Payable Ledger (IRD Compliance)</h4>
+          <div class="flex" style="width: auto; gap: 8px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 4px; font-size: 13px;">
+              <span>From:</span>
+              <input type="date" id="report-start-date" style="width: 140px; padding: 6px;">
+            </div>
+            <div style="display: flex; align-items: center; gap: 4px; font-size: 13px;">
+              <span>To:</span>
+              <input type="date" id="report-end-date" style="width: 140px; padding: 6px;">
+            </div>
+            <button onclick="generateFinancialReport()" class="accent" style="font-size: 12px; padding: 6px 14px; width: auto;">Apply Filter</button>
+          </div>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-title">Gross Revenue (Incl. VAT)</div>
+            <div class="metric-value" style="color: var(--success);" id="m-total-revenue">NPR 0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-title">Total Purchases (COGS)</div>
+            <div class="metric-value" style="color: var(--warning);" id="m-total-purchases">NPR 0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-title">Operating Expenses</div>
+            <div class="metric-value" style="color: var(--danger);" id="m-total-expenses">NPR 0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-title">Net Profit (Before Tax)</div>
+            <div class="metric-value" style="color: var(--accent);" id="m-net-profit">NPR 0</div>
+          </div>
+        </div>
+
+        <div style="margin-top: 20px; background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 16px;">
+          <h5 style="margin: 0 0 12px 0; font-size: 13px; color: var(--text-main);">Tax Ledger: Sales VAT vs Purchase VAT</h5>
+          <div class="metrics-grid" style="margin-top: 0;">
+            <div class="metric-card" style="background: white;">
+              <div class="metric-title">Output VAT (Sales 13%)</div>
+              <div class="metric-value" style="color: var(--accent); font-size: 16px;" id="m-output-vat">NPR 0</div>
+            </div>
+            <div class="metric-card" style="background: white;">
+              <div class="metric-title">Input VAT (Purchases 13%)</div>
+              <div class="metric-value" style="color: var(--warning); font-size: 16px;" id="m-input-vat">NPR 0</div>
+            </div>
+            <div class="metric-card" style="background: white; border-color: #2563eb;">
+              <div class="metric-title">Net VAT Payable</div>
+              <div class="metric-value" style="color: var(--success); font-size: 18px;" id="m-net-vat-payable">NPR 0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flex-between">
+          <h4>Master Sales History (Sales Register)</h4>
+          <button onclick="exportSalesRegisterCSV()" class="accent" style="font-size: 12px; padding: 6px 12px; width: auto;">📥 Export Sales CSV for IRD</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Bill #</th>
+              <th>Closed Date</th>
+              <th>Table & Guest</th>
+              <th>Net Total (Incl. VAT)</th>
+              <th>Output VAT</th>
+              <th>Payment</th>
+              <th>Server</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="history-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 8: ADMIN & MENU MANAGEMENT -->
+    <div id="admin-tab" class="tab-content hidden">
+      <div class="card">
+        <h4>Standard Kitchen Menu Editor (Prices Incl. VAT)</h4>
+        <div class="flex" style="margin-bottom: 15px; flex-wrap: wrap;">
+          <input type="text" id="menu-name-input" placeholder="Item Name" style="flex: 1; min-width: 180px;">
+          <input type="number" id="menu-price-input" placeholder="Price (NPR Incl. VAT)" style="width: 150px;">
+          <button onclick="saveMenuItem()" class="accent" style="width: auto;">Add Kitchen Item</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Item Name</th><th>Price (Incl. VAT)</th><th>Action</th></tr>
+          </thead>
+          <tbody id="menu-items-table"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h4>Staff User Accounts</h4>
+        <div class="flex" style="margin-bottom: 15px; flex-wrap: wrap;">
+          <input type="text" id="new-staff-name" placeholder="Staff Name" style="flex: 1; min-width: 150px;">
+          <input type="text" id="new-staff-pin" placeholder="PIN Code" style="width: 100px;">
+          <select id="new-staff-role" style="width: auto;">
+            <option value="Staff">Staff / Waiter</option>
+            <option value="Admin">Manager / Admin</option>
+          </select>
+          <button onclick="saveStaffAccount()" class="accent" style="width: auto;">Save Account</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Role</th><th>PIN</th><th>Action</th></tr>
+          </thead>
+          <tbody id="staff-accounts-table"></tbody>
+        </table>
+      </div>
+
+      <div class="card" style="border-color: #fca5a5; background: #fff5f5;">
+        <h4 style="color: var(--danger); margin-top:0;">Danger Zone: Factory Reset</h4>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Permanently wipe all sales history, inventory counts, vendors, expenses, and logs from local storage.</p>
+        <button onclick="factoryResetSystem()" class="danger" style="width: auto;">⚠️ Wipe All Data & Reset System</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- CHECKOUT MODAL -->
+<div id="payment-modal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <h3 style="margin-top:0;">Bill Checkout</h3>
+    <p id="modal-bill-info" style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;"></p>
+    
+    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+      <label style="font-weight: bold; font-size: 12px; color: #166534;">⭐ Guest Phone Lookup:</label>
+      <input type="text" id="checkout-phone-input" placeholder="Enter guest phone number" style="margin-top: 6px;" oninput="lookupCheckoutLoyalty()">
+      <div id="checkout-loyalty-match" class="hidden" style="margin-top: 6px; font-size: 12px; color: #047857; font-weight: bold;">
+        <span id="match-guest-name"></span> (<span id="match-discount-rate"></span>% Discount Auto-Applied)
+      </div>
+    </div>
+
+    <div style="background: var(--bg); padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 13px;">
+      <div class="flex-between"><span>Subtotal (Incl. VAT):</span><span>NPR <span id="modal-calc-subtotal">0</span></span></div>
+      <div class="flex-between" style="color: var(--warning);"><span>Discount Amount:</span><span>- NPR <span id="modal-calc-discount">0</span></span></div>
+      <hr style="border: none; border-top: 1px dashed var(--border); margin: 6px 0;">
+      <div class="flex-between" style="font-size: 16px; font-weight: bold; color: var(--success);"><span>Final Net Total:</span><span>NPR <span id="modal-calc-net">0</span></span></div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px; text-align: right;">Includes 13% VAT: NPR <span id="modal-calc-vat">0</span></div>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+      <label style="font-weight: bold; font-size: 12px;">Payment Method:</label>
+      <select id="modal-payment-mode" style="margin-top: 6px;">
+        <option value="Cash">💵 Cash</option>
+        <option value="QR">📱 Fonepay / QR</option>
+        <option value="Card">💳 Card</option>
+      </select>
+    </div>
+
+    <div class="flex-between">
+      <button class="secondary" onclick="closePaymentModal()" style="width: auto;">Cancel</button>
+      <button class="success" onclick="confirmCloseTableBill()" style="width: auto;">Pay & Print Receipt</button>
+    </div>
+  </div>
+</div>
+
+<!-- STOCK ENTRY / RESTOCK MODAL -->
+<div id="stock-modal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <h3 id="stock-modal-title" style="margin-top:0;">Inventory Control</h3>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Product Name:</label>
+      <input type="text" id="stock-name-input" placeholder="e.g. Berry Sorbet" oninput="checkProductExistsInModal()">
+      
+      <div id="new-product-fields" style="display: flex; flex-direction: column; gap: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Category:</label>
+        <select id="stock-category-input">
+          <option value="Sorbet">🍧 Sorbet & Yogurt</option>
+          <option value="Meat">🥩 Cured Meats / Sausages</option>
+          <option value="Beverage">🍹 Beverage</option>
+          <option value="RTE Food">🍱 RTE Packaged</option>
+        </select>
+        
+        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Selling Price (NPR Incl. VAT):</label>
+        <input type="number" id="stock-price-input" placeholder="Selling Price">
+      </div>
+
+      <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Quantity to Add (Restock units):</label>
+      <input type="number" id="stock-qty-input" placeholder="Units to add" min="0">
+      
+      <div class="flex-between" style="margin-top: 10px;">
+        <button class="secondary" onclick="closeStockModal()" style="width: auto;">Cancel</button>
+        <button class="accent" onclick="saveStockItem()" style="width: auto;" id="stock-save-btn">Save Product</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VENDOR DIRECTORY MODAL -->
+<div id="vendor-modal" class="modal-overlay hidden">
+  <div class="modal-card" style="width: 500px;">
+    <h3 style="margin-top:0;">Manage Vendor Directory</h3>
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Add trusted raw material and service suppliers for quick invoice logging.</p>
+    
+    <div class="flex" style="margin-bottom: 15px; flex-wrap: wrap;">
+      <input type="text" id="new-vendor-name" placeholder="Supplier / Company Name" style="flex: 2; min-width: 160px;">
+      <input type="text" id="new-vendor-pan" placeholder="PAN / VAT Number" style="flex: 1; min-width: 120px;">
+      <button onclick="saveNewVendor()" class="accent" style="width: auto;">+ Add</button>
+    </div>
+
+    <div style="max-height: 200px; overflow-y: auto; margin-bottom: 20px;">
+      <table>
+        <thead>
+          <tr><th>Vendor Name</th><th>PAN / VAT #</th><th>Action</th></tr>
+        </thead>
+        <tbody id="vendor-directory-table"></tbody>
+      </table>
+    </div>
+
+    <div style="text-align: right;">
+      <button class="secondary" onclick="closeVendorModal()" style="width: auto;">Done / Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- STAFF PIN LOGIN MODAL -->
+<div id="staff-login-modal" class="modal-overlay hidden">
+  <div class="modal-card" style="width: 320px;">
+    <h3 style="margin-top:0;">Staff Sign In</h3>
+    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Switch active user or manage settings with staff PIN.</p>
+    <input type="password" id="staff-pin-modal-input" placeholder="Enter Staff PIN" style="margin-bottom: 12px; text-align: center; font-size: 16px; letter-spacing: 3px;">
+    <div class="flex-between">
+      <button class="secondary" onclick="closeStaffLoginModal()" style="width: auto;">Cancel</button>
+      <button class="accent" onclick="verifyStaffLogin()" style="width: auto;">Verify PIN</button>
+    </div>
+  </div>
+</div>
+
+<!-- RECEIPT PRINT CONTAINER -->
+<div id="receipt-print-area"></div>
+
+<script>
+  // Updated Developer Master PIN
+  let developerPin = localStorage.getItem("rms_dev_pin") || "951236";
+
+  const DEFAULT_USERS = {
+    "1234": { name: "Manager", role: "Admin" },
+    "0000": { name: "Waiter", role: "Staff" }
+  };
+
+  const DEFAULT_MENU = [
+    { id: 1, name: "Berry Sorbet", price: 250 },
+    { id: 2, name: "Frozen Yogurt", price: 300 },
+    { id: 3, name: "Chicken Sausage", price: 450 }
+  ];
+
+  const DEFAULT_STOCK_ITEMS = [
+    { id: "STK-101", name: "Berry Sorbet Pint", category: "Sorbet", price: 550, stockQty: 24 },
+    { id: "STK-102", name: "Artisanal Pepperoni Pack", category: "Meat", price: 650, stockQty: 15 }
+  ];
+
+  const DEFAULT_VENDORS = {
+    "Himalayan Distributors": { name: "Himalayan Distributors", pan: "601234567" }
+  };
+
+  const DEFAULT_PURCHASES = [
+    { id: 1, date: "2026-06-01", vendor: "Himalayan Distributors", pan: "601234567", billNo: "INV-998", amount: 25000, vatType: "VAT" }
+  ];
+
+  const DEFAULT_LOYAL_GUESTS = {
+    "9801234567": { fullName: "Aarav Sharma", discountPct: 10 }
+  };
+
+  let users = JSON.parse(localStorage.getItem("rms_users")) || DEFAULT_USERS;
+  let currentUser = JSON.parse(localStorage.getItem("rms_session")) || null;
+  let activeOutlet = JSON.parse(localStorage.getItem("rms_active_outlet")) || null;
+  let loyalGuests = JSON.parse(localStorage.getItem("rms_loyal_guests")) || DEFAULT_LOYAL_GUESTS;
+  let stockItems = JSON.parse(localStorage.getItem("rms_stock_items")) || DEFAULT_STOCK_ITEMS;
+  let vendorsList = JSON.parse(localStorage.getItem("rms_vendors")) || DEFAULT_VENDORS;
+  let purchasesList = JSON.parse(localStorage.getItem("rms_purchases")) || DEFAULT_PURCHASES;
+  let attendanceList = JSON.parse(localStorage.getItem("rms_attendance")) || [];
+  let tableBills = JSON.parse(localStorage.getItem("rms_table_bills")) || [];
+  let salesHistory = JSON.parse(localStorage.getItem("rms_sales_history")) || [];
+  let expensesList = JSON.parse(localStorage.getItem("rms_expenses")) || [];
+  let menu = JSON.parse(localStorage.getItem("rms_menu")) || DEFAULT_MENU;
+  let nextBillSerial = parseInt(localStorage.getItem("rms_bill_serial")) || 1001;
+  let activeShift = JSON.parse(localStorage.getItem("rms_active_shift")) || null;
+  
+  let outletRegistrations = JSON.parse(localStorage.getItem("rms_registrations")) || [
+    { id: 1, outletName: "Yak & Berry Thamel", owner: "Ansu Amatya", phone: "9841234567", pan: "609876543", status: "Approved", key: "YKB99", expiryDate: "2027-06-01" }
+  ];
+
+  let pendingTableToClose = null;
+  let activeCheckoutDiscountPct = 0;
+  let activeCheckoutGuestName = "Guest";
+
+  window.onload = () => {
+    // Set default report date fields to the current month range on load
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+    
+    const startInput = document.getElementById("report-start-date");
+    const endInput = document.getElementById("report-end-date");
+    if (startInput && endInput) {
+      startInput.value = firstDay;
+      endInput.value = lastDay;
+    }
+
+    if (activeOutlet && isLicenseValid(activeOutlet)) {
+      showApp();
+    } else {
+      if (activeOutlet) {
+        alert("Your outlet's activation license has expired. Please contact the developer.");
+        localStorage.removeItem("rms_active_outlet");
+      }
+      switchGatewayTab('login');
+    }
+  };
+
+  function isLicenseValid(outlet) {
+    if (!outlet || !outlet.expiryDate) return false;
+    const today = new Date().toISOString().slice(0, 10);
+    return outlet.expiryDate >= today;
+  }
+
+  function switchGatewayTab(tab) {
+    document.getElementById("gw-login-view").classList.add("hidden");
+    document.getElementById("gw-register-view").classList.add("hidden");
+    document.getElementById("gw-admin-view").classList.add("hidden");
+    document.getElementById("gw-btn-login").className = "secondary";
+    document.getElementById("gw-btn-register").className = "secondary";
+    document.getElementById("gw-btn-admin").className = "secondary";
+
+    if (tab === 'login') {
+      document.getElementById("gw-login-view").classList.remove("hidden");
+      document.getElementById("gw-btn-login").className = "accent";
+    } else if (tab === 'register') {
+      document.getElementById("gw-register-view").classList.remove("hidden");
+      document.getElementById("gw-btn-register").className = "accent";
+    } else if (tab === 'admin') {
+      document.getElementById("gw-admin-view").classList.remove("hidden");
+      document.getElementById("gw-btn-admin").className = "accent";
+    }
+  }
+
+  function submitOutletRegistration() {
+    const outletName = document.getElementById("reg-outlet-name").value.trim();
+    const owner = document.getElementById("reg-owner-name").value.trim();
+    const phone = document.getElementById("reg-phone").value.trim();
+    const pan = document.getElementById("reg-pan").value.trim();
+
+    if (!outletName || !owner || !phone || !pan) {
+      return alert("Please fill in all company registration fields!");
+    }
+
+    outletRegistrations.push({
+      id: Date.now(),
+      outletName,
+      owner,
+      phone,
+      pan,
+      status: "Pending",
+      key: "",
+      expiryDate: ""
+    });
+
+    localStorage.setItem("rms_registrations", JSON.stringify(outletRegistrations));
+    document.getElementById("reg-outlet-name").value = "";
+    document.getElementById("reg-owner-name").value = "";
+    document.getElementById("reg-phone").value = "";
+    document.getElementById("reg-pan").value = "";
+
+    document.getElementById("reg-success-box").classList.remove("hidden");
+  }
+
+  function verifyDeveloperPin() {
+    const pin = document.getElementById("dev-admin-pin").value;
+    if (pin === developerPin) {
+      document.getElementById("admin-pin-gate").classList.add("hidden");
+      document.getElementById("admin-dashboard-panel").classList.remove("hidden");
+      document.getElementById("dev-pin-error").classList.add("hidden");
+      document.getElementById("dev-admin-pin").value = "";
+      renderDeveloperAdminTable();
+      renderAdminOutletDropdown();
+    } else {
+      document.getElementById("dev-pin-error").classList.remove("hidden");
+    }
+  }
+
+  function lockDeveloperAdmin() {
+    document.getElementById("admin-dashboard-panel").classList.add("hidden");
+    document.getElementById("admin-pin-gate").classList.remove("hidden");
+  }
+
+  function updateDeveloperPin() {
+    const newPin = document.getElementById("new-dev-pin-input").value.trim();
+    if (!newPin || newPin.length < 4) return alert("Please enter a valid PIN (at least 4 characters).");
+    developerPin = newPin;
+    localStorage.setItem("rms_dev_pin", developerPin);
+    document.getElementById("new-dev-pin-input").value = "";
+    alert("Developer Master PIN successfully updated!");
+  }
+
+  function renderAdminOutletDropdown() {
+    const select = document.getElementById("admin-manual-outlet-select");
+    select.innerHTML = `<option value="">-- Select Outlet to Assign Key --</option>`;
+    outletRegistrations.forEach(reg => {
+      select.innerHTML += `<option value="${reg.id}">${reg.outletName} (${reg.owner})</option>`;
+    });
+  }
+
+  function assignCustomKeyByAdmin() {
+    const selectedId = document.getElementById("admin-manual-outlet-select").value;
+    const customKey = document.getElementById("admin-custom-key-input").value.trim().toUpperCase();
+    const days = parseInt(document.getElementById("admin-custom-days-input").value) || 365;
+
+    if (!selectedId || !customKey) return alert("Please select an outlet and enter a custom activation key.");
+
+    let reg = outletRegistrations.find(r => r.id == selectedId);
+    if (!reg) return;
+
+    let existingKeyOwner = outletRegistrations.find(r => r.key === customKey && r.id != reg.id);
+    if (existingKeyOwner) return alert(`Key ${customKey} is already assigned to ${existingKeyOwner.outletName}!`);
+
+    const today = new Date();
+    today.setDate(today.getDate() + days);
+    const expiryDateStr = today.toISOString().slice(0, 10);
+
+    reg.status = "Approved";
+    reg.key = customKey;
+    reg.expiryDate = expiryDateStr;
+
+    localStorage.setItem("rms_registrations", JSON.stringify(outletRegistrations));
+    renderDeveloperAdminTable();
+    renderAdminOutletDropdown();
+    document.getElementById("admin-custom-key-input").value = "";
+    alert(`Successfully assigned Key [${customKey}] to ${reg.outletName} valid for ${days} days!`);
+  }
+
+  function deleteOutletByAdmin(id) {
+    let reg = outletRegistrations.find(r => r.id == id);
+    if (!reg) return;
+
+    if (confirm(`Are you sure you want to permanently delete outlet registration for "${reg.outletName}"?`)) {
+      outletRegistrations = outletRegistrations.filter(r => r.id != id);
+      localStorage.setItem("rms_registrations", JSON.stringify(outletRegistrations));
+      renderDeveloperAdminTable();
+      renderAdminOutletDropdown();
+      alert(`Outlet "${reg.outletName}" has been deleted.`);
+    }
+  }
+
+  function renderDeveloperAdminTable() {
+    const tbody = document.getElementById("admin-registrations-table");
+    tbody.innerHTML = "";
+    if (outletRegistrations.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color: var(--text-muted);">No registrations found</td></tr>`;
+      return;
+    }
+
+    outletRegistrations.forEach(reg => {
+      let actionArea = "";
+      if (reg.status === "Pending" || !reg.key) {
+        actionArea = `
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <input type="number" id="days-input-${reg.id}" placeholder="Days (e.g. 365)" value="365" style="font-size: 12px; padding: 4px 8px;">
+            <button class="success" style="padding:4px 8px; font-size:11px;" onclick="approveAndIssueKey(${reg.id})">Approve & Issue Key</button>
+            <button class="danger" style="padding:4px 8px; font-size:11px;" onclick="deleteOutletByAdmin(${reg.id})">Delete Outlet</button>
+          </div>
+        `;
+      } else {
+        actionArea = `
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div style="font-size: 11px; color: var(--success);">
+              <b>Key:</b> ${reg.key}<br><b>Expires:</b> ${reg.expiryDate}
+            </div>
+            <button class="danger" style="padding:4px 8px; font-size:11px; width:auto;" onclick="deleteOutletByAdmin(${reg.id})">Delete Outlet</button>
+          </div>
+        `;
+      }
+
+      tbody.innerHTML += `
+        <tr>
+          <td>
+            <b>${reg.outletName}</b><br>
+            <small>Owner: ${reg.owner} | Phone: ${reg.phone}</small><br>
+            <small>PAN: ${reg.pan}</small>
+          </td>
+          <td><span class="badge ${reg.status === 'Approved' ? 'badge-ok' : 'badge-low'}">${reg.status}</span></td>
+          <td>${actionArea}</td>
+        </tr>
+      `;
+    });
+  }
+
+  function approveAndIssueKey(id) {
+    let reg = outletRegistrations.find(r => r.id === id);
+    if (!reg) return;
+
+    const daysInput = document.getElementById(`days-input-${reg.id}`).value;
+    const days = parseInt(daysInput) || 365;
+
+    const today = new Date();
+    today.setDate(today.getDate() + days);
+    const expiryDateStr = today.toISOString().slice(0, 10);
+
+    const generatedKey = "KEY-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    reg.status = "Approved";
+    reg.key = generatedKey;
+    reg.expiryDate = expiryDateStr;
+
+    localStorage.setItem("rms_registrations", JSON.stringify(outletRegistrations));
+    renderDeveloperAdminTable();
+    renderAdminOutletDropdown();
+    alert(`License Key Generated for ${reg.outletName}:\nKey: ${generatedKey}\nValid for: ${days} days (Expires: ${expiryDateStr})`);
+  }
+
+  function handleActivationKeyLogin() {
+    const keyInput = document.getElementById("activation-key-input").value.trim().toUpperCase();
+    if (!keyInput) return alert("Please enter the developer activation key.");
+
+    let matchedReg = outletRegistrations.find(r => r.key === keyInput && r.status === "Approved");
+
+    if (matchedReg) {
+      if (!isLicenseValid(matchedReg)) {
+        return alert("This activation key has expired. Please contact the developer for renewal.");
+      }
+      activeOutlet = {
+        name: matchedReg.outletName,
+        pan: matchedReg.pan,
+        owner: matchedReg.owner,
+        expiryDate: matchedReg.expiryDate
+      };
+      localStorage.setItem("rms_active_outlet", JSON.stringify(activeOutlet));
+      document.getElementById("login-error").classList.add("hidden");
+      document.getElementById("activation-key-input").value = "";
+      showApp();
+    } else {
+      document.getElementById("login-error").classList.remove("hidden");
+    }
+  }
+
+  function switchTab(tabId) {
+    document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
+    document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
+    document.getElementById(tabId).classList.remove("hidden");
+    event.target.classList.add("active");
+    if (tabId === 'attendance-tab') renderAttendanceTable();
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("rms_active_outlet");
+    localStorage.removeItem("rms_session");
+    activeOutlet = null;
+    currentUser = null;
+    document.getElementById("app-section").classList.add("hidden");
+    document.getElementById("gateway-section").classList.remove("hidden");
+    switchGatewayTab('login');
+  }
+
+  function showApp() {
+    document.getElementById("gateway-section").classList.add("hidden");
+    document.getElementById("app-section").classList.remove("hidden");
+    document.getElementById("gateway-app-title").innerText = activeOutlet.name;
+    document.getElementById("user-display").innerText = activeOutlet.name;
+    document.getElementById("role-badge").innerText = `Licensed (Exp: ${activeOutlet.expiryDate})`;
+
+    if (!currentUser) {
+      currentUser = { name: activeOutlet.owner, role: "Admin", pin: "1234" };
+      localStorage.setItem("rms_session", JSON.stringify(currentUser));
+    }
+
+    renderStockTable();
+    renderVendorDropdown();
+    renderPurchasesTable();
+    renderLoyalGuestsTable();
+    renderStaffAccountsTable();
+    generateFinancialReport();
+    renderMenuTable();
+    renderHistoryTable();
+    renderAttendanceTable();
+    renderMenuDropdown();
+    renderOrders();
+    updateShiftUI();
+  }
+
+  function addOrder() {
+    if (!activeShift) return alert("Please OPEN A SHIFT before placing orders!");
+
+    const tableNum = document.getElementById("table-num").value;
+    const selectVal = document.getElementById("item-select").value;
+    const qty = parseInt(document.getElementById("item-qty").value);
+
+    if (!tableNum || !selectVal) return alert("Select Table and Item!");
+
+    const [itemName, itemPrice, stockId] = selectVal.split("|");
+    const price = parseInt(itemPrice);
+
+    if (stockId && stockId !== "NONE") {
+      let trackedItem = stockItems.find(s => s.id === stockId);
+      if (trackedItem) {
+        if (trackedItem.stockQty < qty) {
+          return alert(`Insufficient stock for ${trackedItem.name}! Available: ${trackedItem.stockQty}`);
+        }
+        trackedItem.stockQty -= qty;
+        localStorage.setItem("rms_stock_items", JSON.stringify(stockItems));
+        renderStockTable();
+      }
+    }
+
+    let existingTable = tableBills.find(t => t.table == tableNum);
+    if (existingTable) {
+      let existingItem = existingTable.items.find(i => i.name === itemName);
+      if (existingItem) {
+        existingItem.qty += qty;
+        existingItem.total += price * qty;
+      } else {
+        existingTable.items.push({ name: itemName, price, qty, total: price * qty });
+      }
+    } else {
+      tableBills.push({
+        id: Date.now(),
+        billNo: `YB-${nextBillSerial++}`,
+        table: tableNum,
+        customer: "Guest",
+        phone: "-",
+        items: [{ name: itemName, price, qty, total: price * qty }],
+        createdBy: currentUser ? currentUser.name : activeOutlet.owner
+      });
+      localStorage.setItem("rms_bill_serial", nextBillSerial);
+    }
+
+    localStorage.setItem("rms_table_bills", JSON.stringify(tableBills));
+    renderOrders();
+    renderMenuDropdown();
+    document.getElementById("table-num").value = "";
+  }
+
+  function renderMenuDropdown() {
+    const select = document.getElementById("item-select");
+    select.innerHTML = "";
+
+    const kitchenGroup = document.createElement("optgroup");
+    kitchenGroup.label = "Kitchen Menu (VAT Incl.)";
+    menu.forEach(item => {
+      kitchenGroup.innerHTML += `<option value="${item.name}|${item.price}|NONE">${item.name} (NPR ${item.price})</option>`;
+    });
+    select.appendChild(kitchenGroup);
+
+    const stockGroup = document.createElement("optgroup");
+    stockGroup.label = "RTD / RTE Packaged Stock (VAT Incl.)";
+    stockItems.forEach(s => {
+      const disabled = s.stockQty <= 0 ? "disabled" : "";
+      const label = s.stockQty <= 0 ? `[OUT OF STOCK] ${s.name}` : `${s.name} [Stock: ${s.stockQty}] (NPR ${s.price})`;
+      stockGroup.innerHTML += `<option value="${s.name}|${s.price}|${s.id}" ${disabled}>${label}</option>`;
+    });
+    select.appendChild(stockGroup);
+  }
+
+  function renderOrders() {
+    const tbody = document.getElementById("orders-table");
+    tbody.innerHTML = "";
+    if (tableBills.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: var(--text-muted);">No active occupied tables</td></tr>`;
+      return;
+    }
+
+    tableBills.forEach(tb => {
+      const subtotal = tb.items.reduce((s, i) => s + i.total, 0);
+      const itemsList = tb.items.map(i => `${i.name} x${i.qty}`).join(", ");
+      tbody.innerHTML += `
+        <tr>
+          <td><b>Table ${tb.table}</b></td>
+          <td><span class="badge" style="background:#e2e8f0;">${tb.billNo}</span></td>
+          <td style="font-size:13px;">${itemsList}</td>
+          <td><b>NPR ${subtotal.toLocaleString()}</b></td>
+          <td><small>${tb.createdBy}</small></td>
+          <td><button class="danger" style="padding:4px 8px; font-size:12px; width:auto;" onclick="closeTableBill(${tb.id})">Checkout</button></td>
+        </tr>
+      `;
+    });
+    document.getElementById("total-tables-count").innerText = tableBills.length;
+  }
+
+  function closeTableBill(tableId) {
+    pendingTableToClose = tableBills.find(t => t.id === tableId);
+    if (!pendingTableToClose) return;
+    document.getElementById("modal-bill-info").innerText = `Table ${pendingTableToClose.table} (${pendingTableToClose.billNo})`;
+    updateCheckoutTotals();
+    document.getElementById("payment-modal").classList.remove("hidden");
+  }
+
+  function lookupCheckoutLoyalty() {
+    const phone = document.getElementById("checkout-phone-input").value.trim();
+    const matchBox = document.getElementById("checkout-loyalty-match");
+    if (loyalGuests[phone]) {
+      activeCheckoutDiscountPct = loyalGuests[phone].discountPct;
+      activeCheckoutGuestName = loyalGuests[phone].fullName;
+      document.getElementById("match-guest-name").innerText = activeCheckoutGuestName;
+      document.getElementById("match-discount-rate").innerText = activeCheckoutDiscountPct;
+      matchBox.classList.remove("hidden");
+    } else {
+      activeCheckoutDiscountPct = 0;
+      activeCheckoutGuestName = "Guest";
+      matchBox.classList.add("hidden");
+    }
+    updateCheckoutTotals();
+  }
+
+  function updateCheckoutTotals() {
+    if (!pendingTableToClose) return;
+    const subtotal = pendingTableToClose.items.reduce((s, i) => s + i.total, 0);
+    const discount = subtotal * (activeCheckoutDiscountPct / 100);
+    const netTotal = subtotal - discount;
+    const vatAmount = netTotal - (netTotal / 1.13);
+
+    document.getElementById("modal-calc-subtotal").innerText = subtotal.toLocaleString();
+    document.getElementById("modal-calc-discount").innerText = discount.toLocaleString();
+    document.getElementById("modal-calc-net").innerText = netTotal.toLocaleString();
+    document.getElementById("modal-calc-vat").innerText = vatAmount.toFixed(2);
+  }
+
+  function confirmCloseTableBill() {
+    const tb = pendingTableToClose;
+    const subtotal = tb.items.reduce((s, i) => s + i.total, 0);
+    const discount = subtotal * (activeCheckoutDiscountPct / 100);
+
+    tb.customer = activeCheckoutGuestName;
+    tb.phone = document.getElementById("checkout-phone-input").value.trim() || "-";
+    tb.discountPct = activeCheckoutDiscountPct;
+    tb.closedAt = new Date().toLocaleString();
+    tb.date = new Date().toISOString().slice(0, 10);
+    tb.paymentMethod = document.getElementById("modal-payment-mode").value;
+
+    salesHistory.push(tb);
+    localStorage.setItem("rms_sales_history", JSON.stringify(salesHistory));
+
+    tableBills = tableBills.filter(t => t.id !== tb.id);
+    localStorage.setItem("rms_table_bills", JSON.stringify(tableBills));
+
+    printReceipt(tb, subtotal, discount);
+    closePaymentModal();
+    renderOrders();
+    generateFinancialReport();
+    renderHistoryTable();
+  }
+
+  function printReceipt(tb, subtotal, discount) {
+    const printContainer = document.getElementById('receipt-print-area');
+    if (!printContainer) return;
+
+    const netTotal = subtotal - discount;
+    const taxableAmount = netTotal / 1.13;
+    const vatAmount = netTotal - taxableAmount;
+    const companyName = activeOutlet ? activeOutlet.name : "Yak & Berry POS";
+    const companyPan = activeOutlet ? activeOutlet.pan : "609876543";
+
+    let itemsHTML = "";
+    tb.items.forEach(i => {
+      itemsHTML += `<tr><td>${i.name}</td><td style="text-align:center">${i.qty}</td><td style="text-align:right">NPR ${i.total}</td></tr>`;
+    });
+
+    printContainer.innerHTML = `
+      <div style="text-align: center;">
+        <h3 style="margin: 0;">${companyName.toUpperCase()}</h3>
+        <p style="margin: 2px 0;">Kathmandu, Nepal</p>
+        <p style="margin: 2px 0;">PAN / VAT No: ${companyPan}</p>
+        <p style="margin: 2px 0;">Tax Invoice / Bill No: <b>${tb.billNo}</b></p>
+        <hr style="border-top: 1px dashed #000; border-bottom: none;">
+      </div>
+      <p style="margin: 2px 0;">Date: ${tb.closedAt}</p>
+      <p style="margin: 2px 0;"><b>Table ${tb.table}</b> | Guest: <span>${tb.customer}</span></p>
+      <table style="width: 100%; margin-top: 8px; border-collapse: collapse;">
+        <thead>
+          <tr><th style="text-align: left; border-bottom: 1px solid #000;">Item</th><th style="text-align: center; border-bottom: 1px solid #000;">Qty</th><th style="text-align: right; border-bottom: 1px solid #000;">Total (Incl. VAT)</th></tr>
+        </thead>
+        <tbody>${itemsHTML}</tbody>
+      </table>
+      <hr style="border-top: 1px dashed #000; border-bottom: none; margin: 8px 0;">
+      <div style="display: flex; justify-content: space-between;"><span>Subtotal:</span><span>NPR ${subtotal.toLocaleString()}</span></div>
+      <div style="display: flex; justify-content: space-between;"><span>Discount:</span><span>-NPR ${discount.toLocaleString()}</span></div>
+      <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px; font-size: 13px;"><span>Grand Total (Incl. VAT):</span><span>NPR ${netTotal.toLocaleString()}</span></div>
+      <hr style="border-top: 1px dashed #000; border-bottom: none; margin: 6px 0;">
+      <div style="font-size: 11px;">
+        <div style="display: flex; justify-content: space-between;"><span>Taxable Amount (Excl. VAT):</span><span>NPR ${taxableAmount.toFixed(2)}</span></div>
+        <div style="display: flex; justify-content: space-between;"><span>13% VAT Amount:</span><span>NPR ${vatAmount.toFixed(2)}</span></div>
+      </div>
+      <div style="text-align: center; margin-top: 12px; font-size: 11px;">
+        <p>Thank you for visiting ${companyName}!</p>
+      </div>
+    `;
+
+    setTimeout(() => { window.print(); }, 200);
+  }
+
+  function closePaymentModal() { document.getElementById("payment-modal").classList.add("hidden"); }
+
+  function openVendorModal() {
+    renderVendorDirectoryTable();
+    document.getElementById("vendor-modal").classList.remove("hidden");
+  }
+
+  function closeVendorModal() {
+    document.getElementById("vendor-modal").classList.add("hidden");
+    renderVendorDropdown();
+  }
+
+  function renderVendorDropdown() {
+    const select = document.getElementById("pur-vendor-select");
+    select.innerHTML = `<option value="">-- Select Vendor / Supplier --</option>`;
+    Object.keys(vendorsList).forEach(vName => {
+      select.innerHTML += `<option value="${vName}">${vName} (${vendorsList[vName].pan})</option>`;
+    });
+  }
+
+  function fillVendorPAN() {
+    const selectedName = document.getElementById("pur-vendor-select").value;
+    const panInput = document.getElementById("pur-pan");
+    panInput.value = (selectedName && vendorsList[selectedName]) ? vendorsList[selectedName].pan : "";
+  }
+
+  function saveNewVendor() {
+    const name = document.getElementById("new-vendor-name").value.trim();
+    const pan = document.getElementById("new-vendor-pan").value.trim();
+    if (!name || !pan) return alert("Enter Vendor Name and PAN!");
+    vendorsList[name] = { name, pan };
+    localStorage.setItem("rms_vendors", JSON.stringify(vendorsList));
+    document.getElementById("new-vendor-name").value = "";
+    document.getElementById("new-vendor-pan").value = "";
+    renderVendorDirectoryTable();
+    renderVendorDropdown();
+  }
+
+  function deleteVendor(name) {
+    delete vendorsList[name];
+    localStorage.setItem("rms_vendors", JSON.stringify(vendorsList));
+    renderVendorDirectoryTable();
+    renderVendorDropdown();
+  }
+
+  function renderVendorDirectoryTable() {
+    const tbody = document.getElementById("vendor-directory-table");
+    tbody.innerHTML = "";
+    Object.keys(vendorsList).forEach(vName => {
+      let v = vendorsList[vName];
+      tbody.innerHTML += `<tr><td><b>${v.name}</b></td><td>${v.pan}</td><td><button class="danger" style="padding:2px 6px; font-size:11px; width:auto;" onclick="deleteVendor('${vName}')">Delete</button></td></tr>`;
+    });
+  }
+
+  function addPurchaseBill() {
+    const date = document.getElementById("pur-date").value;
+    const vendor = document.getElementById("pur-vendor-select").value;
+    const pan = document.getElementById("pur-pan").value.trim();
+    const billNo = document.getElementById("pur-billno").value.trim();
+    const amount = parseFloat(document.getElementById("pur-amount").value);
+    const vatType = document.getElementById("pur-vat-type").value;
+
+    if (!date || !vendor || !pan || !billNo || isNaN(amount)) return alert("Fill all purchase details!");
+    purchasesList.push({ id: Date.now(), date, vendor, pan, billNo, amount, vatType });
+    localStorage.setItem("rms_purchases", JSON.stringify(purchasesList));
+    document.getElementById("pur-vendor-select").value = "";
+    document.getElementById("pur-pan").value = "";
+    document.getElementById("pur-billno").value = "";
+    document.getElementById("pur-amount").value = "";
+    renderPurchasesTable();
+    generateFinancialReport();
+    alert("Purchase bill successfully logged.");
+  }
+
+  function renderPurchasesTable() {
+    const tbody = document.getElementById("purchases-table");
+    tbody.innerHTML = "";
+    purchasesList.forEach(p => {
+      let taxable = p.vatType === "VAT" ? p.amount / 1.13 : p.amount;
+      let vat = p.vatType === "VAT" ? p.amount - taxable : 0;
+      tbody.innerHTML += `<tr><td>${p.date}</td><td><b>${p.vendor}</b></td><td>${p.pan}</td><td>${p.billNo}</td><td>NPR ${taxable.toFixed(2)}</td><td>NPR ${vat.toFixed(2)}</td><td><b>NPR ${p.amount.toFixed(2)}</b></td><td><button class="danger" style="padding:2px 6px; font-size:11px; width:auto;" onclick="deletePurchase(${p.id})">Delete</button></td></tr>`;
+    });
+  }
+
+  function deletePurchase(id) {
+    purchasesList = purchasesList.filter(p => p.id !== id);
+    localStorage.setItem("rms_purchases", JSON.stringify(purchasesList));
+    renderPurchasesTable();
+    generateFinancialReport();
+  }
+
+  function exportPurchaseRegisterCSV() {
+    if (purchasesList.length === 0) return alert("No purchase records!");
+    let csvContent = "data:text/csv;charset=utf-8,Date,Vendor Name,PAN/VAT No,Invoice No,Taxable Amount,Input VAT Amount,Total Amount,VAT Type\n";
+    purchasesList.forEach(p => {
+      let taxable = p.vatType === "VAT" ? p.amount / 1.13 : p.amount;
+      let vat = p.vatType === "VAT" ? p.amount - taxable : 0;
+      csvContent += `"${p.date}","${p.vendor}","${p.pan}","${p.billNo}","${taxable.toFixed(2)}","${vat.toFixed(2)}","${p.amount.toFixed(2)}","${p.vatType}"\n`;
+    });
+    const link = document.createElement("a");
+    link.setAttribute("href", encodeURI(csvContent));
+    link.setAttribute("download", `Purchase_Register_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function exportSalesRegisterCSV() {
+    if (salesHistory.length === 0) return alert("No sales history!");
+    let csvContent = "data:text/csv;charset=utf-8,Bill No,Closed Date,Customer,Phone,Payment Method,Net Total (Incl. VAT),Taxable Amount,Output VAT Amount,Server\n";
+    salesHistory.forEach(s => {
+      let sub = s.items.reduce((a,b)=>a+b.total,0);
+      let net = sub - (sub*((s.discountPct||0)/100));
+      let taxable = net / 1.13;
+      let vat = net - taxable;
+      csvContent += `"${s.billNo}","${s.closedAt}","${s.customer}","${s.phone}","${s.paymentMethod}","${net.toFixed(2)}","${taxable.toFixed(2)}","${vat.toFixed(2)}","${s.createdBy}"\n`;
+    });
+    const link = document.createElement("a");
+    link.setAttribute("href", encodeURI(csvContent));
+    link.setAttribute("download", `Sales_Register_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function processFaceAttendance() {
+    const pin = document.getElementById("attendance-pin-input").value.trim();
+    if (!users[pin]) return alert("Invalid Staff PIN!");
+    const staff = users[pin];
+    const todayStr = new Date().toLocaleDateString();
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const overlay = document.getElementById("scan-status-overlay");
+    overlay.innerText = `Face Verified: Welcome ${staff.name}!`;
+    overlay.classList.remove("hidden");
+    setTimeout(() => overlay.classList.add("hidden"), 3000);
+
+    let existingRecord = attendanceList.find(a => a.name === staff.name && a.date === todayStr);
+    if (existingRecord) {
+      if (!existingRecord.clockOut) {
+        existingRecord.clockOut = timeStr;
+        alert(`${staff.name} clocked out at ${timeStr}.`);
+      }
+    } else {
+      attendanceList.push({ id: Date.now(), name: staff.name, role: staff.role, date: todayStr, clockIn: timeStr, clockOut: null });
+      alert(`${staff.name} clocked in at ${timeStr}.`);
+    }
+    localStorage.setItem("rms_attendance", JSON.stringify(attendanceList));
+    document.getElementById("attendance-pin-input").value = "";
+    renderAttendanceTable();
+  }
+
+  function renderAttendanceTable() {
+    const tbody = document.getElementById("attendance-table");
+    tbody.innerHTML = "";
+    const todayStr = new Date().toLocaleDateString();
+    document.getElementById("attendance-date-label").innerText = todayStr;
+    const todaysLogs = attendanceList.filter(a => a.date === todayStr);
+    if (todaysLogs.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color: var(--text-muted);">No attendance logged for today</td></tr>`;
+      return;
+    }
+    todaysLogs.forEach(log => {
+      let statusBadge = log.clockOut ? `<span class="badge badge-out">Completed</span>` : `<span class="badge badge-ok">On Shift</span>`;
+      tbody.innerHTML += `<tr><td><b>${log.name}</b></td><td>${log.role}</td><td>🟢 ${log.clockIn}</td><td>${log.clockOut ? '🔴 ' + log.clockOut : 'Pending'}</td><td>${statusBadge}</td></tr>`;
+    });
+  }
+
+  function exportAttendanceCSV() {
+    if (attendanceList.length === 0) return alert("No attendance records!");
+    let csvContent = "data:text/csv;charset=utf-8,Staff Name,Role,Date,Clock-In,Clock-Out\n";
+    attendanceList.forEach(row => { csvContent += `"${row.name}","${row.role}","${row.date}","${row.clockIn}","${row.clockOut || 'Active'}"\n`; });
+    const link = document.createElement("a");
+    link.setAttribute("href", encodeURI(csvContent));
+    link.setAttribute("download", `attendance_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function openStockModal(prefillName = "") {
+    document.getElementById("stock-name-input").value = prefillName;
+    document.getElementById("stock-price-input").value = "";
+    document.getElementById("stock-qty-input").value = "";
+    checkProductExistsInModal();
+    document.getElementById("stock-modal").classList.remove("hidden");
+  }
+
+  function closeStockModal() { document.getElementById("stock-modal").classList.add("hidden"); }
+
+  function checkProductExistsInModal() {
+    const val = document.getElementById("stock-name-input").value.trim().toLowerCase();
+    const existing = stockItems.find(s => s.name.toLowerCase() === val);
+    const newFields = document.getElementById("new-product-fields");
+    const title = document.getElementById("stock-modal-title");
+    const saveBtn = document.getElementById("stock-save-btn");
+
+    if (existing) {
+      newFields.classList.add("hidden");
+      title.innerText = `Restock Existing Item`;
+      saveBtn.innerText = `Add Quantity Only`;
+    } else {
+      newFields.classList.remove("hidden");
+      title.innerText = `Register New Product`;
+      saveBtn.innerText = `Save New Product`;
+    }
+  }
+
+  function saveStockItem() {
+    const name = document.getElementById("stock-name-input").value.trim();
+    const qtyToAdd = parseInt(document.getElementById("stock-qty-input").value);
+    if (!name || isNaN(qtyToAdd)) return alert("Fill name and quantity!");
+
+    let existing = stockItems.find(s => s.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      existing.stockQty += qtyToAdd;
+    } else {
+      const category = document.getElementById("stock-category-input").value;
+      const price = parseFloat(document.getElementById("stock-price-input").value);
+      if (isNaN(price)) return alert("Enter valid price!");
+      stockItems.push({ id: "STK-" + Date.now(), name, category, price, stockQty: qtyToAdd });
+    }
+    localStorage.setItem("rms_stock_items", JSON.stringify(stockItems));
+    renderStockTable();
+    renderMenuDropdown();
+    closeStockModal();
+  }
+
+  function renderStockTable() {
+    const tbody = document.getElementById("stock-items-table");
+    tbody.innerHTML = "";
+    stockItems.forEach(s => {
+      let totalVal = s.price * s.stockQty;
+      let badge = s.stockQty <= 0 ? `<span class="badge badge-out">Out of Stock</span>` : s.stockQty < 5 ? `<span class="badge badge-low">Low Stock</span>` : `<span class="badge badge-ok">In Stock</span>`;
+      tbody.innerHTML += `<tr><td><b>${s.name}</b></td><td>${s.category}</td><td>NPR ${s.price}</td><td><b>${s.stockQty}</b> units</td><td><b>NPR ${totalVal.toLocaleString()}</b></td><td>${badge}</td><td><button class="accent" style="padding:2px 6px; font-size:11px; width:auto;" onclick="openStockModal('${s.name}')">+ Restock</button> <button class="danger" style="padding:2px 6px; font-size:11px; width:auto;" onclick="deleteStock('${s.id}')">Delete</button></td></tr>`;
+    });
+  }
+
+  function deleteStock(id) {
+    stockItems = stockItems.filter(s => s.id !== id);
+    localStorage.setItem("rms_stock_items", JSON.stringify(stockItems));
+    renderStockTable();
+    renderMenuDropdown();
+  }
+
+  function toggleShiftModal() {
+    if (!activeShift) {
+      const floatAmt = prompt("Enter Opening Float (NPR):", "5000");
+      if (floatAmt !== null) {
+        activeShift = { id: Date.now(), openedAt: new Date().toLocaleString(), openingCash: parseFloat(floatAmt) || 0 };
+        localStorage.setItem("rms_active_shift", JSON.stringify(activeShift));
+      }
+    } else {
+      if (confirm("Close Shift?")) {
+        activeShift = null;
+        localStorage.removeItem("rms_active_shift");
+      }
+    }
+    updateShiftUI();
+  }
+
+  function updateShiftUI() {
+    const badge = document.getElementById("shift-status-badge");
+    if (activeShift) {
+      badge.innerText = "Shift Active";
+      badge.className = "badge badge-ok";
+    } else {
+      badge.innerText = "Shift Closed";
+      badge.className = "badge badge-low";
+    }
+  }
+
+  function saveLoyalGuest() {
+    const phone = document.getElementById("loyalty-phone-input").value.trim();
+    const name = document.getElementById("loyalty-name-input").value.trim();
+    const discount = parseFloat(document.getElementById("loyalty-discount-input").value) || 0;
+    if (!phone || !name) return;
+    loyalGuests[phone] = { fullName: name, discountPct: discount };
+    localStorage.setItem("rms_loyal_guests", JSON.stringify(loyalGuests));
+    renderLoyalGuestsTable();
+  }
+
+  function renderLoyalGuestsTable() {
+    const tbody = document.getElementById("loyal-guests-table");
+    tbody.innerHTML = "";
+    Object.keys(loyalGuests).forEach(p => {
+      tbody.innerHTML += `<tr><td>${p}</td><td>${loyalGuests[p].fullName}</td><td>${loyalGuests[p].discountPct}%</td><td><button class="danger" style="padding:2px 6px; width:auto;" onclick="deleteLoyal('${p}')">Delete</button></td></tr>`;
+    });
+  }
+
+  function deleteLoyal(phone) {
+    delete loyalGuests[phone];
+    localStorage.setItem("rms_loyal_guests", JSON.stringify(loyalGuests));
+    renderLoyalGuestsTable();
+  }
+
+  function generateFinancialReport() {
+    const startDate = document.getElementById("report-start-date") ? document.getElementById("report-start-date").value : "";
+    const endDate = document.getElementById("report-end-date") ? document.getElementById("report-end-date").value : "";
+
+    let rev = 0, exp = 0, pur = 0;
+    let outputVat = 0, inputVat = 0;
+
+    salesHistory.forEach(s => {
+      const recordDate = s.date || (s.closedAt ? s.closedAt.slice(0, 10) : "");
+      if ((!startDate || recordDate >= startDate) && (!endDate || recordDate <= endDate)) {
+        const sub = s.items.reduce((a, b) => a + b.total, 0);
+        const netSale = sub - (sub * ((s.discountPct || 0) / 100));
+        rev += netSale;
+        outputVat += netSale - (netSale / 1.13);
+      }
+    });
+
+    purchasesList.forEach(p => {
+      if ((!startDate || p.date >= startDate) && (!endDate || p.date <= endDate)) {
+        pur += p.amount;
+        if (p.vatType === "VAT") {
+          inputVat += p.amount - (p.amount / 1.13);
+        }
+      }
+    });
+
+    expensesList.forEach(e => {
+      const recordDate = e.isoDate || (e.date ? e.date.slice(0, 10) : "");
+      if ((!startDate || recordDate >= startDate) && (!endDate || recordDate <= endDate)) {
+        exp += e.amount;
+      }
+    });
+
+    let netVatPayable = outputVat - inputVat;
+    let netProfit = rev - (pur + exp);
+
+    document.getElementById("m-total-revenue").innerText = `NPR ${rev.toLocaleString()}`;
+    document.getElementById("m-total-purchases").innerText = `NPR ${pur.toLocaleString()}`;
+    document.getElementById("m-total-expenses").innerText = `NPR ${exp.toLocaleString()}`;
+    document.getElementById("m-net-profit").innerText = `NPR ${netProfit.toLocaleString()}`;
+
+    document.getElementById("m-output-vat").innerText = `NPR ${outputVat.toFixed(2)}`;
+    document.getElementById("m-input-vat").innerText = `NPR ${inputVat.toFixed(2)}`;
+    document.getElementById("m-net-vat-payable").innerText = `NPR ${netVatPayable.toFixed(2)}`;
+  }
+
+  function addExpense() {
+    const title = document.getElementById("exp-title").value;
+    const amt = parseFloat(document.getElementById("exp-amount").value);
+    if (!title || !amt) return;
+    const todayIso = new Date().toISOString().slice(0, 10);
+    expensesList.push({ title, amount: amt, date: new Date().toLocaleString(), isoDate: todayIso });
+    localStorage.setItem("rms_expenses", JSON.stringify(expensesList));
+    document.getElementById("exp-title").value = "";
+    document.getElementById("exp-amount").value = "";
+    alert("Expense Recorded!");
+    generateFinancialReport();
+  }
+
+  function openStaffLoginModal() { document.getElementById("staff-login-modal").classList.remove("hidden"); }
+  function closeStaffLoginModal() { document.getElementById("staff-login-modal").classList.add("hidden"); }
+  
+  function verifyStaffLogin() {
+    const pin = document.getElementById("staff-pin-modal-input").value;
+    if (users[pin]) {
+      currentUser = { ...users[pin], pin: pin };
+      localStorage.setItem("rms_session", JSON.stringify(currentUser));
+      alert(`Switched active user to: ${currentUser.name} (${currentUser.role})`);
+      document.getElementById("staff-pin-modal-input").value = "";
+      closeStaffLoginModal();
+    } else {
+      alert("Invalid Staff PIN Code.");
+    }
+  }
+
+  function renderStaffAccountsTable() {
+    const tbody = document.getElementById("staff-accounts-table");
+    tbody.innerHTML = "";
+    Object.keys(users).forEach(pin => {
+      tbody.innerHTML += `<tr><td>${users[pin].name}</td><td>${users[pin].role}</td><td>${pin}</td><td><button class="danger" style="padding:2px 6px; width:auto;" onclick="deleteStaff('${pin}')">Delete</button></td></tr>`;
+    });
+  }
+
+  function deleteStaff(pin) {
+    if (Object.keys(users).length <= 1) return alert("Cannot delete last staff account!");
+    delete users[pin];
+    localStorage.setItem("rms_users", JSON.stringify(users));
+    renderStaffAccountsTable();
+  }
+
+  function saveStaffAccount() {
+    const name = document.getElementById("new-staff-name").value;
+    const pin = document.getElementById("new-staff-pin").value;
+    const role = document.getElementById("new-staff-role").value;
+    if (!name || !pin) return;
+    users[pin] = { name, role };
+    localStorage.setItem("rms_users", JSON.stringify(users));
+    document.getElementById("new-staff-name").value = "";
+    document.getElementById("new-staff-pin").value = "";
+    renderStaffAccountsTable();
+  }
+
+  function renderMenuTable() {
+    const tbody = document.getElementById("menu-items-table");
+    tbody.innerHTML = "";
+    menu.forEach(m => {
+      tbody.innerHTML += `<tr><td>${m.name}</td><td>NPR ${m.price}</td><td><button class="danger" style="padding:2px 6px; width:auto;" onclick="deleteMenuItem(${m.id})">Delete</button></td></tr>`;
+    });
+  }
+
+  function deleteMenuItem(id) {
+    menu = menu.filter(m => m.id !== id);
+    localStorage.setItem("rms_menu", JSON.stringify(menu));
+    renderMenuTable();
+    renderMenuDropdown();
+  }
+
+  function saveMenuItem() {
+    const name = document.getElementById("menu-name-input").value;
+    const price = parseFloat(document.getElementById("menu-price-input").value);
+    if (!name || !price) return;
+    menu.push({ id: Date.now(), name, price });
+    localStorage.setItem("rms_menu", JSON.stringify(menu));
+    document.getElementById("menu-name-input").value = "";
+    document.getElementById("menu-price-input").value = "";
+    renderMenuTable();
+    renderMenuDropdown();
+  }
+
+  function renderHistoryTable() {
+    const tbody = document.getElementById("history-table");
+    tbody.innerHTML = "";
+    salesHistory.slice().reverse().forEach(s => {
+      const sub = s.items.reduce((a, b) => a + b.total, 0);
+      const total = sub - (sub * ((s.discountPct || 0) / 100));
+      const vatOut = total - (total / 1.13);
+      tbody.innerHTML += `<tr><td>${s.billNo}</td><td><small>${s.closedAt}</small></td><td>Table ${s.table} (${s.customer})</td><td>NPR ${total.toLocaleString()}</td><td>NPR ${vatOut.toFixed(2)}</td><td>${s.paymentMethod}</td><td>${s.createdBy}</td><td><button class="accent" style="padding:2px 6px; width:auto;" onclick='printReceipt(${JSON.stringify(s)}, ${sub}, ${sub - total})'>Print</button></td></tr>`;
+    });
+  }
+
+  function factoryResetSystem() {
+    if (confirm("WARNING: This will wipe all data. Are you sure?")) {
+      localStorage.clear();
+      alert("System wiped. Page will reload.");
+      location.reload();
+    }
+  }
+</script>
+
+</body>
+</html>
